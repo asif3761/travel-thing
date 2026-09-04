@@ -117,6 +117,106 @@ section { position: relative; }
 }
 .btn-whatsapp:hover { background: var(--maroon-dark); }
 
+/* -------------------- OPENING INTRO -------------------- */
+/* Full-screen splash played once on load: a plane crosses left-to-right
+   while the brand name is revealed in the same motion (a clip-path wipe
+   timed to the plane's flight), then the whole thing lifts away to
+   reveal the site. Click anywhere to skip. Respects reduced motion. */
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--maroon-dark) 0%, var(--maroon) 65%, var(--maroon-dark) 100%);
+  cursor: pointer;
+  transition: opacity .75s var(--ease), transform .75s var(--ease);
+}
+.intro-overlay.exit {
+  opacity: 0;
+  transform: translateY(-4%);
+  pointer-events: none;
+}
+.intro-overlay.hidden { display: none; }
+
+.intro-inner {
+  position: relative;
+  width: min(88vw, 640px);
+}
+
+.intro-track {
+  position: absolute;
+  left: -20%; right: -20%; top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+  overflow: hidden;
+}
+.intro-track::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: linear-gradient(to right, var(--gold-light) 55%, transparent 0%);
+  background-size: 10px 1px;
+  background-repeat: repeat-x;
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: introTrail 1.6s var(--ease) .1s forwards;
+}
+@keyframes introTrail { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.intro-plane {
+  position: absolute;
+  top: 50%; left: -10%;
+  width: 30px; height: 30px;
+  transform: translateY(-50%);
+  fill: var(--gold-light);
+  opacity: 0;
+  animation: introFly 1.6s var(--ease) .1s forwards;
+}
+@keyframes introFly {
+  0%   { left: -10%; opacity: 0; }
+  10%  { opacity: 1; }
+  100% { left: 108%; opacity: 1; }
+}
+
+.intro-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.intro-name {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 7vw, 3.6rem);
+  font-weight: 600;
+  color: var(--ivory);
+  white-space: nowrap;
+  clip-path: inset(0 100% 0 0);
+  animation: introReveal 1.6s var(--ease) .1s forwards;
+}
+@keyframes introReveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+.intro-tagline {
+  font-family: var(--font-body);
+  font-size: .92rem;
+  letter-spacing: .02em;
+  color: var(--gold-light);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: introFade .6s ease 1.75s forwards;
+}
+@keyframes introFade {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 560px) {
+  .intro-plane { width: 24px; height: 24px; }
+}
+
 /* -------------------- HEADER / NAV -------------------- */
 .site-header {
   position: fixed;
@@ -689,6 +789,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .intro-overlay { display: none; }
   .flight-scene .plane.animate { animation: none; offset-distance: 100%; opacity: 1; }
   .flight-divider::before { transition: none; transform: scaleX(1); }
   .flight-divider .divider-plane { transition: none; left: calc(100% - 28px); opacity: 1; }
@@ -698,6 +799,21 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 </style>
 </head>
 <body>
+
+<!-- ============ OPENING INTRO ============ -->
+<!-- Full-screen splash: plane flies left to right while the brand name
+     wipes in with it, then the whole thing lifts away. Plays once on
+     load; click anywhere to skip. See main.js: wireIntro(). -->
+<div class="intro-overlay" id="intro-overlay" role="presentation">
+  <div class="intro-inner">
+    <div class="intro-track"></div>
+    <svg class="intro-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12 L22 3 L15 21 L11 13 Z"/></svg>
+    <div class="intro-brand">
+      <span class="intro-name" data-brand-name>Travel Things</span>
+      <span class="intro-tagline" data-tagline>Fly further. Feel at ease.</span>
+    </div>
+  </div>
+</div>
 
 <!-- ============ HEADER ============ -->
 <header class="site-header">
@@ -1165,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderTestimonials();
   wireNav();
   wireFlightDividers();
-  wireHeroFlight();
+  wireIntro();
   wireTestimonialRotation();
   wireContactForm();
   document.getElementById("year").textContent = new Date().getFullYear();
@@ -1345,7 +1461,32 @@ function wireFlightDividers() {
   dividers.forEach(d => io.observe(d));
 }
 
-/* ---------- Hero flight animation (plays once on load) ---------- */
+/* ---------- Opening intro (plays once on load, then hands off to the hero) ---------- */
+function wireIntro() {
+  const overlay = document.getElementById("intro-overlay");
+  if (!overlay) { wireHeroFlight(); return; }
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) {
+    overlay.classList.add("hidden");
+    wireHeroFlight();
+    return;
+  }
+
+  document.documentElement.style.overflow = "hidden";
+
+  function finish() {
+    overlay.classList.add("exit");
+    document.documentElement.style.overflow = "";
+    wireHeroFlight();
+    window.setTimeout(() => overlay.classList.add("hidden"), 750);
+  }
+
+  overlay.addEventListener("click", finish, { once: true });
+  window.setTimeout(finish, 2900);
+}
+
+/* ---------- Hero flight animation (plays once the intro hands off) ---------- */
 function wireHeroFlight() {
   const plane = document.querySelector(".flight-scene .plane");
   const path = document.querySelector(".flight-scene .route-path");
