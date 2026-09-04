@@ -547,15 +547,26 @@ section { position: relative; }
 
 .ticket-footer {
   margin-top: auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding-top: 16px;
   border-top: 1px solid rgba(34,27,23,.08);
 }
-.ticket-price { font-family: var(--font-display); font-size: 1.15rem; color: var(--maroon); }
-.ticket-price span { display: block; font-family: var(--font-body); font-size: .72rem; color: var(--charcoal-soft); }
-.ticket-cta { font-size: .85rem; font-weight: 600; color: var(--charcoal); border-bottom: 1px solid var(--gold); padding-bottom: 2px; }
+.ticket-ask {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 0;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--charcoal);
+  transition: background .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease);
+}
+.ticket-ask svg { width: 14px; height: 14px; fill: var(--gold); transition: fill .25s var(--ease); flex-shrink: 0; }
+.ticket-ask:hover { background: var(--maroon); border-color: var(--maroon); color: var(--ivory); }
+.ticket-ask:hover svg { fill: var(--ivory); }
 
 .ticket-card.dimmed { opacity: .35; }
 
@@ -1152,6 +1163,9 @@ const BOOKING_STEPS = [
 
 // ---------- PACKAGES ----------
 // type: "Family" | "Solo" | "Group"
+// Note: "priceFrom" is kept on each package but is not currently shown on
+// the site — cards show an "Ask for detail" button (via WhatsApp) instead.
+// To bring pricing back later, see the ticket-footer block in main.js.
 const PACKAGES = [
   {
     id: "dubai-family-5d",
@@ -1353,8 +1367,10 @@ function renderPackages(list) {
         ${pkg.highlights.map(h => `<li>${h}</li>`).join("")}
       </ul>
       <div class="ticket-footer">
-        <div class="ticket-price">${pkg.priceFrom}<span>per person, from</span></div>
-        <a class="ticket-cta" target="_blank" rel="noopener" href="${waLink(`Hi, I'm interested in the ${pkg.title} package.`)}">Ask about this →</a>
+        <a class="ticket-ask" target="_blank" rel="noopener" href="${waLink(`Hi, I'm interested in the ${pkg.title} package. Could you share the details?`)}">
+          ${PLANE_SVG}
+          Ask for detail
+        </a>
       </div>
     </article>
   `).join("");
